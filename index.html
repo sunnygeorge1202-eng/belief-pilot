@@ -90,7 +90,7 @@ const DOMAINS = {
   trust: {
     unit: "colleague",
     introTitle: "Judging colleagues",
-    introText: "You will read short reports about four fictional colleagues at a mid-sized company. After each report you will rate how reliable you think the colleague is. Reports come from different sources. The source of each report is always shown, so take it into account as you see fit.",
+    introText: "Imagine a mid-sized manufacturing company called Sundaram Components. The company and its employees are <b>fictional, invented for this study</b>, so you will not know any of them. You will read about four employees, one at a time. For each person you will read a few short reports, one after another, and judge how reliable that person is as a colleague. Every report shows its source above the text. Use your own judgment.",
     anchorsBelief: ["Certainly unreliable","Certainly reliable"],
     qBelief: t => `How likely is it that <b>${t.name}</b> is a reliable colleague?`,
     qWeight: t => `How much should this report count when judging ${t.name}?`,
@@ -101,40 +101,40 @@ const DOMAINS = {
     srcHigh:   t => `Source: verified company record, reviewed by the department head`,
     srcLow:    t => `Source: anonymous, unverified message on the internal chat board`,
     targets: [
-      { id:"maya", name:"Maya Rao", tag:"Junior analyst",
+      { id:"meera", name:"Meera Nair", tag:"Junior analyst",
         formation:[
-          "Maya delivered her part of the quarterly report two days early.",
-          "When a colleague asked for help with a spreadsheet, Maya stayed late and finished it as she had promised.",
-          "Maya's figures were checked by two reviewers and contained no errors."],
-        challenge:"Maya missed a client deadline last month and did not tell anyone until the day after.",
-        test:"Maya told a client that a figure had been checked when it had not." },
-      { id:"daniel", name:"Daniel Okafor", tag:"Site engineer",
+          "Meera delivered her part of the quarterly report two days early.",
+          "When a colleague asked for help with a spreadsheet, Meera stayed late and finished it as she had promised.",
+          "Meera's figures were checked by two reviewers and contained no errors."],
+        challenge:"Meera missed a client deadline last month and did not tell anyone until the day after.",
+        test:"Meera told a client that a figure had been checked when it had not." },
+      { id:"arjun", name:"Arjun Mehta", tag:"Site engineer",
         formation:[
-          "Daniel's site inspection reports were filed on time every week this quarter.",
-          "Daniel spotted a safety issue himself and arranged the repair before anyone asked.",
-          "Daniel returned borrowed shared equipment the same day, in working order."],
-        challenge:"Daniel signed off an inspection without visiting the site.",
-        test:"Daniel's reported hours for last week did not match the site entry log." },
-      { id:"lena", name:"Lena Fischer", tag:"Procurement officer",
+          "Arjun's site inspection reports were filed on time every week this quarter.",
+          "Arjun spotted a safety issue himself and arranged the repair before anyone asked.",
+          "Arjun returned borrowed shared equipment the same day, in working order."],
+        challenge:"Arjun signed off an inspection without visiting the site.",
+        test:"Arjun's reported hours for last week did not match the site entry log." },
+      { id:"kavita", name:"Kavita Deshmukh", tag:"Procurement officer",
         formation:[
-          "Lena negotiated a supplier contract, and the terms were fulfilled exactly as she had described them.",
-          "Lena pointed out a billing mistake that would have benefited her own department.",
-          "Lena kept confidential supplier quotes confidential even when a manager pressed her."],
-        challenge:"Lena shared one supplier's confidential quote with a competing supplier.",
-        test:"Lena accepted a gift from a supplier and did not record it, as company policy requires." },
-      { id:"samuel", name:"Samuel Ito", tag:"Support team lead",
+          "Kavita negotiated a supplier contract, and the terms were fulfilled exactly as she had described them.",
+          "Kavita pointed out a billing mistake that would have benefited her own department.",
+          "Kavita kept confidential supplier quotes confidential even when a manager pressed her."],
+        challenge:"Kavita shared one supplier's confidential quote with a competing supplier.",
+        test:"Kavita accepted a gift from a supplier and did not record it, as company policy requires." },
+      { id:"imran", name:"Imran Sheikh", tag:"Support team lead",
         formation:[
-          "Samuel's team closed support tickets within the promised time every week this month.",
-          "Samuel took responsibility for a team error in front of a client and fixed it.",
-          "Samuel's handover notes were complete, and a new colleague could continue the work without questions."],
-        challenge:"Samuel marked tickets as resolved before the problems had actually been fixed.",
-        test:"Samuel told a client that a repair was scheduled when no repair had been booked." }
+          "Imran's team closed support tickets within the promised time every week this month.",
+          "Imran took responsibility for a team error in front of a client and fixed it.",
+          "Imran's handover notes were complete, and a new colleague could continue the work without questions."],
+        challenge:"Imran marked tickets as resolved before the problems had actually been fixed.",
+        test:"Imran told a client that a repair was scheduled when no repair had been booked." }
     ]
   },
   health: {
     unit: "practice",
     introTitle: "Judging health practices",
-    introText: "You will read short reports about four everyday health practices. The practices were invented for this study, so you will not have heard of them. After each report you will rate how likely you think it is that the practice works. Nothing in this study is health advice. The source of each report is always shown, so take it into account as you see fit.",
+    introText: "You will read about four everyday health practices. The practices are <b>fictional, invented for this study</b>, so you will not have heard of them and they are not real treatments. For each practice you will read a few short reports, one after another, and judge how likely it is that the practice works. Every report shows its source above the text. Nothing in this study is health advice. Use your own judgment.",
     anchorsBelief: ["Certainly does not work","Certainly works"],
     qBelief: t => `How likely is it that <b>${t.name}</b> reduces ${t.outcome}?`,
     qWeight: t => `How much should this report count when judging whether ${t.lname} works?`,
@@ -264,12 +264,32 @@ const S = {
   ref: Q.get("ref") || null,
   startedAt: null, ageBand: null,
   trials: [], attnPass: null, compPass: null, compAttempts: 0,
-  order: [], credOrder: []
+  order: [], credOrder: [], done: {}
 };
 if (S.prolific.pid) S.src = "prolific";
 
 const TOTAL_ITEMS = 20;   // 4 targets x 5 items
 let itemsDone = 0;
+
+/* ---------- save and resume (same browser, 3 days) ---------- */
+const CK = "bp_ckpt_v1";
+function save(){
+  try { localStorage.setItem(CK, JSON.stringify({ t:Date.now(), itemsDone, S:{
+    pid:S.pid, domain:S.domain, src:S.src, prolific:S.prolific, ref:S.ref, startedAt:S.startedAt, ageBand:S.ageBand,
+    trials:S.trials, attnPass:S.attnPass, compPass:S.compPass, compAttempts:S.compAttempts, order:S.order, credOrder:S.credOrder, done:S.done } })); } catch(e){}
+}
+function loadCk(){
+  try { const c = JSON.parse(localStorage.getItem(CK) || "null");
+    if (c && c.S && c.S.done && c.S.done.consent && !c.S.done.finished && Date.now() - c.t < 72*3600*1000) return c; } catch(e){}
+  return null;
+}
+function resumePrompt(pct){
+  return new Promise(res => {
+    app.innerHTML = `<div class="card"><h2>Welcome back</h2><p>You have an unfinished session, about ${pct}% done. You can continue where you left off.</p>
+      <div class="actions"><button class="btn" id="rs" style="margin-right:10px">Start over</button><button class="btn" id="rc">Continue</button></div></div>`;
+    $("#rc").onclick = () => res("resume"); $("#rs").onclick = () => res("restart");
+  });
+}
 
 /* =========================================================
    FLOW
@@ -291,11 +311,12 @@ async function consent(){
   let ok1 = false, ok2 = false;
   await screen(`
     <h1>Judgment Study</h1>
-    <p class="muted">About 10 minutes &middot; anonymous &middot; no right or wrong answers</p>
+    <p class="muted">About 12 to 15 minutes &middot; anonymous &middot; no right or wrong answers</p>
     <p>You are invited to take part in a short research study on how people form and revise judgments when they read reports from different sources.</p>
     <ul>
       <li>You will read short reports and answer questions using sliders.</li>
       <li>We do not collect your name, email or any identifying details. We record your answers, timing, a broad age band and your device type.</li>
+      <li>You can pause and come back later on the same device and browser. Your progress is saved for 3 days.</li>
       <li>Taking part is voluntary. You can stop at any time by closing this page, and incomplete data will not be used.</li>
       <li>Data is stored securely and will only be reported in aggregate.</li>
       <li>Questions: ${CONFIG.CONTACT_EMAIL}</li>
@@ -335,31 +356,52 @@ async function instructions(){
     { disabled:true, setup:(r, nb) => { bindSlider(r, "practice", () => { nb.disabled = false; }); }});
 }
 
+async function example(){
+  const trust = S.domain === "trust";
+  await screen(`
+    <h2>How each page works</h2>
+    <p class="muted">This example is not part of the study and is not recorded.</p>
+    <div class="report"><div class="src">${trust ? "Source: a colleague who has worked with Ravi" : "Source: small study or practitioner account"}</div>
+      <div class="txt">${trust ? "Ravi left a team meeting ten minutes early without telling anyone." : "A small study reported that people who walked for ten minutes after waking felt more alert."}</div></div>
+    <p>After every report you will answer a few questions with sliders:</p>
+    <ol>
+      <li><b>Your judgment.</b> ${trust ? "How likely is it that the person is a reliable colleague, from 'certainly unreliable' to 'certainly reliable'." : "How likely is it that the practice works, from 'certainly does not work' to 'certainly works'."} Your judgment can change from one report to the next.</li>
+      <li><b>Your confidence.</b> How sure you are about that judgment.</li>
+      <li><b>How much the report should count.</b> Sometimes you will be asked how much weight you think this particular report deserves. This is about the report, not about your overall judgment. There is no correct answer.</li>
+    </ol>
+    <p>Sometimes you will also be asked a short extra question, for example whether you want to read more or what you would do.</p>`,
+    { next:"I understand" });
+}
+
 async function comprehension(){
+  const trust = S.domain === "trust";
+  const q1 = trust ? "The company and the colleagues you will read about are:" : "The health practices you will read about are:";
+  const o1 = trust ? ["Real people at a real company","Made up for this study"] : ["Real, established practices","Made up for this study"];
   for (let attempt = 1; attempt <= 2; attempt++) {
     S.compAttempts = attempt;
     let ans = {};
     await screen(`
       <h2>Two quick checks</h2>
-      <p class="q">1. Are the ${DOMAINS[S.domain].unit}s described in this study real?</p>
+      <p class="muted">Answer from the instructions you just read.</p>
+      <p class="q">1. ${q1}</p>
       <div class="opts">
-        <label><input type="radio" name="k1" value="real"> Yes, they are real</label>
-        <label><input type="radio" name="k1" value="fict"> No, they were invented for this study</label>
+        <label><input type="radio" name="k1" value="real"> ${o1[0]}</label>
+        <label><input type="radio" name="k1" value="fict"> ${o1[1]}</label>
       </div>
-      <p class="q">2. What will you be asked to do?</p>
+      <p class="q">2. What will you do in this study?</p>
       <div class="opts">
-        <label><input type="radio" name="k2" value="a"> Read short reports and rate how likely something is</label>
+        <label><input type="radio" name="k2" value="a"> Read short reports one at a time and answer questions with sliders</label>
         <label><input type="radio" name="k2" value="b"> Solve maths problems against the clock</label>
         <label><input type="radio" name="k2" value="c"> Upload personal documents</label>
       </div>
-      ${attempt===2?'<p class="warn">Please read the statements again carefully.</p>':''}`,
+      ${attempt===2?'<p class="warn">Please look at the instructions once more and try again.</p>':''}`,
       { disabled:true, setup:(r, nb) => {
         const upd = () => { const a=r.querySelector('input[name=k1]:checked'), b=r.querySelector('input[name=k2]:checked'); ans.k1=a&&a.value; ans.k2=b&&b.value; nb.disabled = !(a&&b); };
         r.querySelectorAll("input[type=radio]").forEach(i => i.onchange = upd);
       }});
     if (ans.k1 === "fict" && ans.k2 === "a") { S.compPass = true; return; }
     if (attempt === 1) {
-      await screen(`<h2>A quick reminder</h2><p>The ${DOMAINS[S.domain].unit}s in this study are <b>invented</b>, and you will <b>read short reports and rate how likely something is</b>. Let's try the checks once more.</p>`);
+      await screen(`<h2>A quick reminder</h2><p>The ${trust ? "company and its employees are" : "health practices are"} <b>made up for this study</b>. You will <b>read short reports one at a time and answer questions with sliders</b>. Let's try the two checks once more.</p>`);
     }
   }
   S.compPass = false;
@@ -425,6 +467,7 @@ function runItem({ D, t, pos, phase, idx, text, cred, prevBelief, evidenceValue 
       S.trials.push(rec);
       enqueue({ type:"trial", pid:S.pid, domain:S.domain, row:rec });
       itemsDone++;
+      save();
       setProgress(itemsDone, TOTAL_ITEMS + 2, "");
       res(rec);
     };
@@ -435,15 +478,18 @@ async function runTarget(pos){
   const D = DOMAINS[S.domain];
   const t = D.targets.find(x => x.id === S.order[pos-1]);
   const cred = S.credOrder[pos-1];
-  await screen(`<div class="muted">${D.unit === "colleague" ? "Colleague" : "Practice"} ${pos} of 4</div>
-    <h2>${t.name}</h2><p>${t.tag || ""}</p><p>You will now read a few reports about ${D.unit === "colleague" ? t.name : t.lname}.</p>`, { next:"Start reading" });
+  const have = (phase, idx) => S.trials.find(r => r.target_pos === pos && r.phase === phase && r.item_idx === idx);
+  if (!S.trials.some(r => r.target_pos === pos)) {
+    await screen(`<div class="muted">${D.unit === "colleague" ? "Colleague" : "Practice"} ${pos} of 4</div>
+      <h2>${t.name}</h2><p>${t.tag || ""}</p><p>You will now read a few reports about ${D.unit === "colleague" ? t.name : t.lname}.</p>`, { next:"Start reading" });
+  }
   let prev = null;
   for (let i = 0; i < 3; i++) {
-    const rec = await runItem({ D, t, pos, phase:"formation", idx:i+1, text:t.formation[i], cred, prevBelief:prev, evidenceValue:CONFIG.EVIDENCE_POS });
+    const rec = have("formation", i+1) || await runItem({ D, t, pos, phase:"formation", idx:i+1, text:t.formation[i], cred, prevBelief:prev, evidenceValue:CONFIG.EVIDENCE_POS });
     prev = rec.belief;
   }
-  const r1 = await runItem({ D, t, pos, phase:"challenge", idx:1, text:t.challenge, cred, prevBelief:prev, evidenceValue:CONFIG.EVIDENCE_CONTRA });
-  await runItem({ D, t, pos, phase:"test", idx:1, text:t.test, cred, prevBelief:r1.belief, evidenceValue:CONFIG.EVIDENCE_CONTRA });
+  const r1 = have("challenge", 1) || await runItem({ D, t, pos, phase:"challenge", idx:1, text:t.challenge, cred, prevBelief:prev, evidenceValue:CONFIG.EVIDENCE_CONTRA });
+  if (!have("test", 1)) await runItem({ D, t, pos, phase:"test", idx:1, text:t.test, cred, prevBelief:r1.belief, evidenceValue:CONFIG.EVIDENCE_CONTRA });
 }
 
 async function attentionCheck(){
@@ -471,14 +517,15 @@ async function debrief(){
   setProgress(TOTAL_ITEMS + 2, TOTAL_ITEMS + 2, "");
   app.innerHTML = `<div class="card"><h2>Saving your responses...</h2><p class="muted">Please keep this page open for a moment.</p></div>`;
   await Promise.race([flush(), sleep(8000)]);
-  try { localStorage.setItem("bp_done", "1"); } catch(e){}
+  S.done.finished = 1;
+  try { localStorage.setItem("bp_done", "1"); localStorage.removeItem(CK); } catch(e){}
   const D = DOMAINS[S.domain];
   const done = S.src === "prolific"
     ? `<p>Please click the button below to return to Prolific and register your completion.</p>`
     : `<p>Your completion code is:</p><p><span class="code">${CONFIG.NETWORK_COMPLETION_CODE}</span></p>`;
   app.innerHTML = `<div class="card">
     <h2>Thank you</h2>
-    <p><b>About this study.</b> We are studying how people revise a judgment when a later report contradicts an earlier impression, and how much the source of a report matters. The ${D.unit}s you read about were invented for this study${S.domain==="health" ? ", and nothing here is health advice" : ""}. The question about reading one more report was a measure of curiosity. No further reports were available.</p>
+    <p><b>About this study.</b> We are studying how people revise a judgment when a later report contradicts an earlier impression, and how much the source of a report matters. The ${D.unit}s you read about were invented for this study${S.domain==="health" ? ", and nothing here is health advice" : ""}. The question about reading one more report was a measure of curiosity. It did not change which reports you saw: everyone read the same number of reports.</p>
     <p>Your answers are anonymous. If you have questions, contact ${CONFIG.CONTACT_EMAIL}.</p>
     ${done}
     ${S.src === "prolific" ? `<div class="actions"><button class="btn" id="go">Return to Prolific</button></div>` : ""}</div>`;
@@ -488,17 +535,25 @@ async function debrief(){
 async function main(){
   try { if (localStorage.getItem("bp_done") && !Q.get("again")) {
     app.innerHTML = `<div class="card"><h2>Already completed</h2><p>Our records show this browser has already completed the study. Thank you!</p></div>`; return; } } catch(e){}
-  S.domain = await assignDomain();
-  await consent();
-  await about();
-  S.startedAt = nowISO();
-  enqueue({ type:"start", pid:S.pid, domain:S.domain, participant:participantPayload("started") });
-  await instructions();
-  await comprehension();
-  planConditions();
+  const ck = loadCk();
+  if (ck) {
+    const pct = Math.round(100 * ck.itemsDone / (TOTAL_ITEMS + 2));
+    if (await resumePrompt(pct) === "resume") { Object.assign(S, ck.S); itemsDone = ck.itemsDone; setProgress(itemsDone, TOTAL_ITEMS + 2, ""); }
+    else { try { localStorage.removeItem(CK); } catch(e){} }
+  }
+  if (!S.domain) S.domain = await assignDomain();
+  if (!S.done.consent) { await consent(); S.done.consent = 1; }
+  if (!S.done.about) {
+    await about();
+    S.startedAt = nowISO();
+    enqueue({ type:"start", pid:S.pid, domain:S.domain, participant:participantPayload("started") });
+    S.done.about = 1; save();
+  }
+  if (!S.done.instr) { await instructions(); await example(); S.done.instr = 1; save(); }
+  if (!S.done.comp) { await comprehension(); planConditions(); S.done.comp = 1; save(); }
   await runTarget(1);
   await runTarget(2);
-  await attentionCheck();
+  if (!S.done.attn) { await attentionCheck(); S.done.attn = 1; save(); }
   await runTarget(3);
   await runTarget(4);
   await debrief();
