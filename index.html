@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Judgment Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F0E8; --ink:#0D2B1F; --muted:#5a6a60; --card:#fffdf8; --line:#d8cfba;
+  --gold:#C9A84C; --gold-d:#9c7f2e; --green:#0D2B1F; --warn:#9a3b2b;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0D2B1F; --ink:#F5F0E8; --muted:#b9c4b8; --card:#133626; --line:#2a4a39; --gold:#C9A84C; --gold-d:#e0c26a; --green:#F5F0E8; --warn:#ff9c8a; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.55}
+body{padding:16px}
+.wrap{max-width:720px;margin:0 auto}
+h1,h2,h3{font-family:'Playfair Display',Georgia,serif;font-weight:700;line-height:1.25;margin:0 0 .6em}
+h1{font-size:1.9rem} h2{font-size:1.4rem} h3{font-size:1.1rem}
+p{margin:0 0 1em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 22px;margin:12px 0}
+.muted{color:var(--muted);font-size:.92rem}
+.progress{height:6px;background:var(--line);border-radius:6px;overflow:hidden;margin:8px 0 4px}
+.progress>i{display:block;height:100%;background:var(--gold);width:0;transition:width .3s}
+.ptext{font-size:.82rem;color:var(--muted);display:flex;justify-content:space-between}
+.actions{margin-top:22px;display:flex;justify-content:flex-end}
+.btn{background:var(--gold);color:#0D2B1F;border:0;border-radius:10px;padding:12px 26px;font:600 1rem Inter,sans-serif;cursor:pointer}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.report{border-left:4px solid var(--gold);background:rgba(201,168,76,.10);padding:14px 16px;border-radius:0 10px 10px 0;margin:0 0 22px}
+.report .src{font-size:.82rem;font-weight:600;letter-spacing:.02em;color:var(--gold-d);margin-bottom:6px}
+.report .txt{font-size:1.08rem}
+.q{margin:20px 0 6px;font-weight:600}
+.step.hidden{display:none}
+.slwrap{margin:6px 0 4px}
+.sl{position:relative;padding:10px 0 0}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:34px;background:transparent;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:8px;background:var(--line);border-radius:8px}
+input[type=range]::-moz-range-track{height:8px;background:var(--line);border-radius:8px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--gold);border:3px solid var(--green);margin-top:-10px}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--gold);border:3px solid var(--green)}
+.slwrap[data-touched="0"] input[type=range]::-webkit-slider-thumb{opacity:0}
+.slwrap[data-touched="0"] input[type=range]::-moz-range-thumb{opacity:0}
+input[type=range]:focus-visible{outline:2px solid var(--gold);outline-offset:4px;border-radius:6px}
+.ticks{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);margin-top:2px;gap:12px}
+.val{text-align:center;font-weight:600;font-size:1.05rem;min-height:1.5em;color:var(--gold-d)}
+.hint{font-size:.82rem;color:var(--muted);margin-top:2px}
+.opts label{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin:8px 0;cursor:pointer}
+.opts input{margin-top:4px}
+select{font:inherit;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);width:100%}
+.warn{color:var(--warn);font-weight:600}
+.code{font:600 1.3rem ui-monospace,Menlo,monospace;background:rgba(201,168,76,.18);padding:10px 14px;border-radius:8px;display:inline-block}
+ul{padding-left:1.2em;margin:0 0 1em}
+li{margin:.3em 0}
+noscript{display:block;padding:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="prog" style="display:none">
+    <div class="progress"><i id="bar"></i></div>
+    <div class="ptext"><span id="plabel"></span><span id="pct"></span></div>
+  </div>
+  <div id="app"><noscript>This study needs JavaScript enabled.</noscript></div>
+</div>
+
+<script>
+/* =========================================================
+   CONFIG: edit these before publishing
+   ========================================================= */
+const CONFIG = {
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzH50Q21bx7B2Tn2jMhUBaOP9z_B6yp4hGOhR3FVjlwQcLFunJ5CALLip_6Y8mEQDo/exec",
+  PROLIFIC_COMPLETION_URL: "https://app.prolific.com/submissions/complete?cc=PASTE_COMPLETION_CODE",
+  NETWORK_COMPLETION_CODE: "PILOT-2026",
+  CONTACT_EMAIL: "rohitkumar.pillai@gmail.com",
+  EVIDENCE_CONTRA: 20,     // implied value of contradictory reports (0-100 scale)
+  EVIDENCE_POS: 85         // implied value of supportive reports
+};
+const IS_LOCAL = ["localhost","127.0.0.1"].includes(location.hostname);
+const Q = new URLSearchParams(location.search);
+const API = (IS_LOCAL && Q.get("api")) ? Q.get("api") : CONFIG.SCRIPT_URL;
+
+/* =========================================================
+   STIMULI
+   ========================================================= */
+const DOMAINS = {
+  trust: {
+    unit: "colleague",
+    introTitle: "Judging colleagues",
+    introText: "You will read short reports about four fictional colleagues at a mid-sized company. After each report you will rate how reliable you think the colleague is. Reports come from different sources. The source of each report is always shown, so take it into account as you see fit.",
+    anchorsBelief: ["Certainly unreliable","Certainly reliable"],
+    qBelief: t => `How likely is it that <b>${t.name}</b> is a reliable colleague?`,
+    qWeight: t => `How much should this report count when judging ${t.name}?`,
+    qBehav: t => `You can entrust ${t.name} with up to 10 points of responsibility on a shared project (0 = none, 10 = full). How many points would you entrust?`,
+    behavAnchors: ["0 points","10 points"],
+    qSeek: t => `Would you like to read one more report about ${t.name} before continuing?`,
+    srcMedium: t => `Source: a colleague who has worked with ${t.name}`,
+    srcHigh:   t => `Source: verified company record, reviewed by the department head`,
+    srcLow:    t => `Source: anonymous, unverified message on the internal chat board`,
+    targets: [
+      { id:"maya", name:"Maya Rao", tag:"Junior analyst",
+        formation:[
+          "Maya delivered her part of the quarterly report two days early.",
+          "When a colleague asked for help with a spreadsheet, Maya stayed late and finished it as she had promised.",
+          "Maya's figures were checked by two reviewers and contained no errors."],
+        challenge:"Maya missed a client deadline last month and did not tell anyone until the day after.",
+        test:"Maya told a client that a figure had been checked when it had not." },
+      { id:"daniel", name:"Daniel Okafor", tag:"Site engineer",
+        formation:[
+          "Daniel's site inspection reports were filed on time every week this quarter.",
+          "Daniel spotted a safety issue himself and arranged the repair before anyone asked.",
+          "Daniel returned borrowed shared equipment the same day, in working order."],
+        challenge:"Daniel signed off an inspection without visiting the site.",
+        test:"Daniel's reported hours for last week did not match the site entry log." },
+      { id:"lena", name:"Lena Fischer", tag:"Procurement officer",
+        formation:[
+          "Lena negotiated a supplier contract, and the terms were fulfilled exactly as she had described them.",
+          "Lena pointed out a billing mistake that would have benefited her own department.",
+          "Lena kept confidential supplier quotes confidential even when a manager pressed her."],
+        challenge:"Lena shared one supplier's confidential quote with a competing supplier.",
+        test:"Lena accepted a gift from a supplier and did not record it, as company policy requires." },
+      { id:"samuel", name:"Samuel Ito", tag:"Support team lead",
+        formation:[
+          "Samuel's team closed support tickets within the promised time every week this month.",
+          "Samuel took responsibility for a team error in front of a client and fixed it.",
+          "Samuel's handover notes were complete, and a new colleague could continue the work without questions."],
+        challenge:"Samuel marked tickets as resolved before the problems had actually been fixed.",
+        test:"Samuel told a client that a repair was scheduled when no repair had been booked." }
+    ]
+  },
+  health: {
+    unit: "practice",
+    introTitle: "Judging health practices",
+    introText: "You will read short reports about four everyday health practices. The practices were invented for this study, so you will not have heard of them. After each report you will rate how likely you think it is that the practice works. Nothing in this study is health advice. The source of each report is always shown, so take it into account as you see fit.",
+    anchorsBelief: ["Certainly does not work","Certainly works"],
+    qBelief: t => `How likely is it that <b>${t.name}</b> reduces ${t.outcome}?`,
+    qWeight: t => `How much should this report count when judging whether ${t.lname} works?`,
+    qBehav: t => `How willing would you be to try ${t.lname} for two weeks? (0 = not at all, 10 = definitely)`,
+    behavAnchors: ["Not at all","Definitely"],
+    qSeek: t => `Would you like to read one more report about ${t.lname} before continuing?`,
+    srcMedium: t => `Source: small study or practitioner account`,
+    srcHigh:   t => `Source: randomised, peer-reviewed trial (600 participants), independently replicated`,
+    srcLow:    t => `Source: anonymous post on a wellness forum`,
+    srcTest:   t => `Source: clinic newsletter summarising follow-up data`,
+    targets: [
+      { id:"hydration", name:"Interval hydration", lname:"interval hydration", outcome:"afternoon fatigue",
+        tag:"Drinking a small glass of water every 45 minutes during the workday",
+        formation:[
+          "A small study (about 40 participants) reported that 6 in 10 people following interval hydration said their afternoon fatigue improved.",
+          "A second small study found a modest drop in afternoon fatigue scores after three weeks of interval hydration.",
+          "An occupational health coach described seeing less afternoon fatigue in many of the office workers she advised to use it."],
+        challenge:"A new trial found no difference in afternoon fatigue between people using interval hydration and people following a placebo routine.",
+        test:"A clinic newsletter summarised four weeks of follow-up and reported no improvement in afternoon fatigue among participants." },
+      { id:"stretching", name:"Reverse-sequence stretching", lname:"reverse-sequence stretching", outcome:"lower-back stiffness",
+        tag:"Stretching the lower back before the hips instead of after",
+        formation:[
+          "A small study (about 40 participants) reported that 6 in 10 people using reverse-sequence stretching said their lower-back stiffness improved.",
+          "A second small study found a modest drop in lower-back stiffness scores after three weeks of reverse-sequence stretching.",
+          "A physiotherapy assistant described seeing less lower-back stiffness in many of the clients she taught the routine."],
+        challenge:"A new trial found no difference in lower-back stiffness between people using reverse-sequence stretching and people following a placebo routine.",
+        test:"A clinic newsletter summarised four weeks of follow-up and reported no improvement in lower-back stiffness among participants." },
+      { id:"breathing", name:"Anchor breathing", lname:"anchor breathing", outcome:"nervousness before presentations",
+        tag:"A two-minute counted breathing routine",
+        formation:[
+          "A small study (about 40 participants) reported that 6 in 10 people using anchor breathing said their nervousness before presentations eased.",
+          "A second small study found a modest drop in pre-presentation nervousness scores after three weeks of anchor breathing.",
+          "A public-speaking coach described seeing less nervousness in many of the people she taught the routine."],
+        challenge:"A new trial found no difference in pre-presentation nervousness between people using anchor breathing and people following a placebo routine.",
+        test:"A clinic newsletter summarised four weeks of follow-up and reported no reduction in nervousness before presentations among participants." },
+      { id:"screens", name:"Evening screen taper", lname:"the evening screen taper", outcome:"difficulty falling asleep",
+        tag:"Gradually dimming and reducing screens in the last hour before bed",
+        formation:[
+          "A small study (about 40 participants) reported that 6 in 10 people using the evening screen taper said it became easier to fall asleep.",
+          "A second small study found a modest drop in time taken to fall asleep after three weeks of the evening screen taper.",
+          "A sleep-hygiene counsellor described seeing easier sleep onset in many of the clients she advised to use it."],
+        challenge:"A new trial found no difference in difficulty falling asleep between people using the evening screen taper and people following a placebo routine.",
+        test:"A clinic newsletter summarised four weeks of follow-up and reported no improvement in difficulty falling asleep among participants." }
+    ]
+  }
+};
+
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+const $ = (s, r=document) => r.querySelector(s);
+const app = $("#app");
+const rid = () => { const a = new Uint8Array(10); crypto.getRandomValues(a); return Array.from(a, b => (b % 36).toString(36)).join(""); };
+const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const nowISO = () => new Date().toISOString();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- send queue (idempotent on server by trial key) ---------- */
+const QKEY = "bp_queue_v1";
+function qLoad(){ try { return JSON.parse(localStorage.getItem(QKEY) || "[]"); } catch(e){ return MEMQ; } }
+function qSave(q){ try { localStorage.setItem(QKEY, JSON.stringify(q)); } catch(e){ MEMQ = q; } }
+let MEMQ = [];
+function enqueue(msg){ const q = qLoad(); q.push(msg); qSave(q); flush(); }
+let flushP = null;
+function flush(){
+  if (flushP) return flushP;
+  if (!API || API.startsWith("PASTE")) return Promise.resolve();
+  flushP = (async () => {
+    try {
+      while (true) {
+        const q = qLoad();                       // always re-read: new items may have been queued meanwhile
+        if (!q.length) break;
+        try {
+          await fetch(API, { method:"POST", mode:"no-cors", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(q[0]) });
+        } catch (e) { break; }
+        const q2 = qLoad(); q2.shift(); qSave(q2);   // items are only ever appended, so index 0 is the one just sent
+      }
+    } finally { flushP = null; }
+  })();
+  return flushP;
+}
+setInterval(flush, 8000);
+window.addEventListener("online", flush);
+
+/* ---------- UI helpers ---------- */
+function setProgress(done, total, label){
+  $("#prog").style.display = "block";
+  const p = Math.round(100*done/total);
+  $("#bar").style.width = p + "%";
+  $("#plabel").textContent = label || "";
+  $("#pct").textContent = p + "%";
+}
+function screen(html, opts={}){
+  return new Promise(res => {
+    app.innerHTML = `<div class="card">${html}<div class="actions"><button id="next" class="btn" ${opts.disabled?"disabled":""}>${opts.next||"Continue"}</button></div></div>`;
+    window.scrollTo(0,0);
+    const nb = $("#next");
+    nb.onclick = () => { nb.disabled = true; res(); };
+    if (opts.setup) opts.setup(app, nb);
+  });
+}
+function sliderHTML(id, left, right, min=0, max=100){
+  return `<div class="slwrap" id="${id}" data-touched="0">
+    <div class="sl"><input type="range" min="${min}" max="${max}" value="${Math.round((min+max)/2)}" aria-label="slider">
+    <div class="ticks"><span>${left}</span><span style="text-align:right">${right}</span></div></div>
+    <div class="val">&nbsp;</div></div>`;
+}
+function bindSlider(root, id, onTouch){
+  const w = $("#"+id, root), inp = $("input", w), val = $(".val", w);
+  const t0 = performance.now(); let touched = false, rt = null;
+  const touch = () => {
+    if (!touched) { touched = true; w.dataset.touched = "1"; rt = Math.round(performance.now() - t0); if (onTouch) onTouch(); }
+    val.textContent = inp.value;
+  };
+  inp.addEventListener("input", touch);
+  inp.addEventListener("pointerup", touch);
+  inp.addEventListener("keydown", () => setTimeout(touch, 0));
+  return { get value(){ return touched ? +inp.value : null; }, get touched(){ return touched; }, get rt(){ return rt; } };
+}
+
+/* =========================================================
+   STATE
+   ========================================================= */
+const S = {
+  pid: rid(), domain: null, src: "network",
+  prolific: { pid: Q.get("PROLIFIC_PID"), study: Q.get("STUDY_ID"), session: Q.get("SESSION_ID") },
+  ref: Q.get("ref") || null,
+  startedAt: null, ageBand: null,
+  trials: [], attnPass: null, compPass: null, compAttempts: 0,
+  order: [], credOrder: []
+};
+if (S.prolific.pid) S.src = "prolific";
+
+const TOTAL_ITEMS = 20;   // 4 targets x 5 items
+let itemsDone = 0;
+
+/* =========================================================
+   FLOW
+   ========================================================= */
+async function assignDomain(){
+  const forced = Q.get("task");
+  if (forced && DOMAINS[forced]) return forced;
+  try {
+    const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 4000);
+    const r = await fetch(API + (API.includes("?")?"&":"?") + "action=assign", { signal: ctl.signal });
+    clearTimeout(to);
+    const j = await r.json();
+    if (j && DOMAINS[j.domain]) return j.domain;
+  } catch(e){}
+  return Math.random() < 0.5 ? "trust" : "health";
+}
+
+async function consent(){
+  let ok1 = false, ok2 = false;
+  await screen(`
+    <h1>Judgment Study</h1>
+    <p class="muted">About 10 minutes &middot; anonymous &middot; no right or wrong answers</p>
+    <p>You are invited to take part in a short research study on how people form and revise judgments when they read reports from different sources.</p>
+    <ul>
+      <li>You will read short reports and answer questions using sliders.</li>
+      <li>We do not collect your name, email or any identifying details. We record your answers, timing, a broad age band and your device type.</li>
+      <li>Taking part is voluntary. You can stop at any time by closing this page, and incomplete data will not be used.</li>
+      <li>Data is stored securely and will only be reported in aggregate.</li>
+      <li>Questions: ${CONFIG.CONTACT_EMAIL}</li>
+    </ul>
+    <div class="opts">
+      <label><input type="checkbox" id="c1"> I am 18 years old or older.</label>
+      <label><input type="checkbox" id="c2"> I have read the information above and agree to take part.</label>
+    </div>`,
+    { next:"I agree, start", disabled:true, setup:(r, nb) => {
+      const upd = () => { nb.disabled = !($("#c1",r).checked && $("#c2",r).checked); };
+      $("#c1",r).onchange = upd; $("#c2",r).onchange = upd;
+    }});
+}
+
+async function about(){
+  let sel;
+  await screen(`
+    <h2>One quick question</h2>
+    <p>Which age band are you in?</p>
+    <select id="age"><option value="">Select...</option>
+      <option value="18 to 24">18 to 24</option><option value="25 to 34">25 to 34</option><option value="35 to 44">35 to 44</option><option value="45 to 54">45 to 54</option><option value="55 plus">55 or older</option><option value="not stated">Prefer not to say</option>
+    </select>`,
+    { disabled:true, setup:(r, nb) => { sel = $("#age", r); sel.onchange = () => { nb.disabled = !sel.value; }; }});
+  S.ageBand = sel.value;
+}
+
+async function instructions(){
+  const D = DOMAINS[S.domain];
+  await screen(`
+    <h2>${D.introTitle}</h2>
+    <p>${D.introText}</p>
+    <p>For each report you will move a slider. Click or tap anywhere on the bar to set it. The handle appears after your first click. Try it here:</p>
+    <div class="q">How much do you like the idea of a quiet weekend?</div>
+    ${sliderHTML("practice","Not at all","Very much")}
+    <p class="hint">This practice slider is not recorded.</p>
+    <p>Please answer based on your own judgment. Move at a comfortable pace.</p>`,
+    { disabled:true, setup:(r, nb) => { bindSlider(r, "practice", () => { nb.disabled = false; }); }});
+}
+
+async function comprehension(){
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    S.compAttempts = attempt;
+    let ans = {};
+    await screen(`
+      <h2>Two quick checks</h2>
+      <p class="q">1. Are the ${DOMAINS[S.domain].unit}s described in this study real?</p>
+      <div class="opts">
+        <label><input type="radio" name="k1" value="real"> Yes, they are real</label>
+        <label><input type="radio" name="k1" value="fict"> No, they were invented for this study</label>
+      </div>
+      <p class="q">2. What will you be asked to do?</p>
+      <div class="opts">
+        <label><input type="radio" name="k2" value="a"> Read short reports and rate how likely something is</label>
+        <label><input type="radio" name="k2" value="b"> Solve maths problems against the clock</label>
+        <label><input type="radio" name="k2" value="c"> Upload personal documents</label>
+      </div>
+      ${attempt===2?'<p class="warn">Please read the statements again carefully.</p>':''}`,
+      { disabled:true, setup:(r, nb) => {
+        const upd = () => { const a=r.querySelector('input[name=k1]:checked'), b=r.querySelector('input[name=k2]:checked'); ans.k1=a&&a.value; ans.k2=b&&b.value; nb.disabled = !(a&&b); };
+        r.querySelectorAll("input[type=radio]").forEach(i => i.onchange = upd);
+      }});
+    if (ans.k1 === "fict" && ans.k2 === "a") { S.compPass = true; return; }
+    if (attempt === 1) {
+      await screen(`<h2>A quick reminder</h2><p>The ${DOMAINS[S.domain].unit}s in this study are <b>invented</b>, and you will <b>read short reports and rate how likely something is</b>. Let's try the checks once more.</p>`);
+    }
+  }
+  S.compPass = false;
+}
+
+function planConditions(){
+  // block-randomised: positions (1,2) and (3,4) each get one high and one low credibility challenge
+  const D = DOMAINS[S.domain];
+  S.order = shuffle(D.targets.map(t => t.id));
+  const blocks = [shuffle(["high","low"]), shuffle(["high","low"])];
+  S.credOrder = [...blocks[0], ...blocks[1]];
+}
+
+function srcFor(D, t, phase, cred){
+  if (phase === "formation") return { cred:"medium", label: D.srcMedium(t) };
+  if (phase === "challenge") return { cred, label: cred === "high" ? D.srcHigh(t) : D.srcLow(t) };
+  return { cred:"medium", label: (D.srcTest ? D.srcTest(t) : D.srcMedium(t)) };
+}
+
+function runItem({ D, t, pos, phase, idx, text, cred, prevBelief, evidenceValue }){
+  const src = srcFor(D, t, phase, cred);
+  return new Promise(res => {
+    const hasWeight = phase !== "formation";
+    const isChallenge = phase === "challenge";
+    const isTest = phase === "test";
+    app.innerHTML = `<div class="card">
+      <div class="muted" style="margin-bottom:8px">${D.unit === "colleague" ? "Colleague" : "Practice"} ${pos} of 4: <b>${t.name}</b>${t.tag ? " &middot; " + t.tag : ""}</div>
+      <div class="report"><div class="src">${src.label}</div><div class="txt">${text}</div></div>
+      <div class="step" id="s1"><div class="q">${D.qBelief(t)}</div>${sliderHTML("b", D.anchorsBelief[0], D.anchorsBelief[1])}<div class="hint">Click or tap the bar to set your answer.</div></div>
+      <div class="step hidden" id="s2"><div class="q">How confident are you in that judgment?</div>${sliderHTML("c","Not at all confident","Completely confident")}</div>
+      ${hasWeight ? `<div class="step hidden" id="s3"><div class="q">${D.qWeight(t)}</div>${sliderHTML("w","Not at all","Fully")}</div>` : ""}
+      ${isChallenge ? `<div class="step hidden" id="s4"><div class="q">${D.qSeek(t)}</div>
+        <div class="opts"><label><input type="radio" name="seek" value="1"> Yes</label><label><input type="radio" name="seek" value="0"> No</label></div>
+        <div class="hint">Further reports may not be available in this study.</div></div>` : ""}
+      ${isTest ? `<div class="step hidden" id="s5"><div class="q">${D.qBehav(t)}</div>${sliderHTML("h", D.behavAnchors[0], D.behavAnchors[1], 0, 10)}</div>` : ""}
+      <div class="actions"><button id="next" class="btn" disabled>Next</button></div></div>`;
+    window.scrollTo(0,0);
+    const nb = $("#next"); const t0 = performance.now();
+    const reveal = id => { const e = $("#"+id); if (e) e.classList.remove("hidden"); };
+    let seek = null;
+    const check = () => {
+      let ok = b.touched && c.touched;
+      if (hasWeight) ok = ok && w.touched;
+      if (isChallenge) ok = ok && seek !== null;
+      if (isTest) ok = ok && h.touched;
+      nb.disabled = !ok;
+    };
+    const b = bindSlider(app, "b", () => { reveal("s2"); check(); });
+    const c = bindSlider(app, "c", () => { if (hasWeight) reveal("s3"); check(); });
+    const w = hasWeight ? bindSlider(app, "w", () => { if (isChallenge) reveal("s4"); if (isTest) reveal("s5"); check(); }) : null;
+    const h = isTest ? bindSlider(app, "h", check) : null;
+    if (isChallenge) app.querySelectorAll("input[name=seek]").forEach(i => i.onchange = () => { seek = +i.value; check(); });
+    nb.onclick = () => {
+      nb.disabled = true;
+      const rec = {
+        key: `${S.pid}_${pos}_${phase}${idx}`, pid: S.pid, domain: S.domain,
+        target_pos: pos, target_id: t.id, cred_cond: S.credOrder[pos-1],
+        phase, item_idx: idx, source_cred: src.cred, evidence_value: evidenceValue,
+        belief_prev: prevBelief, belief: b.value, confidence: c.value,
+        weight: w ? w.value : null, seek_more: isChallenge ? seek : null, behav: h ? h.value : null,
+        rt_belief_ms: b.rt, rt_total_ms: Math.round(performance.now() - t0), ts: nowISO()
+      };
+      S.trials.push(rec);
+      enqueue({ type:"trial", pid:S.pid, domain:S.domain, row:rec });
+      itemsDone++;
+      setProgress(itemsDone, TOTAL_ITEMS + 2, "");
+      res(rec);
+    };
+  });
+}
+
+async function runTarget(pos){
+  const D = DOMAINS[S.domain];
+  const t = D.targets.find(x => x.id === S.order[pos-1]);
+  const cred = S.credOrder[pos-1];
+  await screen(`<div class="muted">${D.unit === "colleague" ? "Colleague" : "Practice"} ${pos} of 4</div>
+    <h2>${t.name}</h2><p>${t.tag || ""}</p><p>You will now read a few reports about ${D.unit === "colleague" ? t.name : t.lname}.</p>`, { next:"Start reading" });
+  let prev = null;
+  for (let i = 0; i < 3; i++) {
+    const rec = await runItem({ D, t, pos, phase:"formation", idx:i+1, text:t.formation[i], cred, prevBelief:prev, evidenceValue:CONFIG.EVIDENCE_POS });
+    prev = rec.belief;
+  }
+  const r1 = await runItem({ D, t, pos, phase:"challenge", idx:1, text:t.challenge, cred, prevBelief:prev, evidenceValue:CONFIG.EVIDENCE_CONTRA });
+  await runItem({ D, t, pos, phase:"test", idx:1, text:t.test, cred, prevBelief:r1.belief, evidenceValue:CONFIG.EVIDENCE_CONTRA });
+}
+
+async function attentionCheck(){
+  let sl;
+  await screen(`<h2>Attention check</h2><p>To show you are reading carefully, please set the slider to <b>37</b>, then continue.</p>
+    ${sliderHTML("a","0","100")}`,
+    { disabled:true, setup:(r, nb) => { sl = bindSlider(r, "a", () => { nb.disabled = false; }); }});
+  S.attnPass = sl.value !== null && Math.abs(sl.value - 37) <= 3;
+}
+
+function participantPayload(status){
+  return {
+    pid:S.pid, domain:S.domain, src:S.src, started_at:S.startedAt, completed_at: status==="completed" ? nowISO() : "",
+    duration_s: status==="completed" ? Math.round((Date.now() - Date.parse(S.startedAt))/1000) : "",
+    age_band:S.ageBand, device: window.innerWidth < 640 ? "mobile" : "desktop",
+    attn_pass: S.attnPass === null ? "" : (S.attnPass ? 1 : 0),
+    comp_pass: S.compPass === null ? "" : (S.compPass ? 1 : 0), comp_attempts:S.compAttempts,
+    target_order:S.order.join(","), cred_order:S.credOrder.join(","), status,
+    prolific_pid:S.prolific.pid || S.ref || "", study_id:S.prolific.study || "", session_id:S.prolific.session || ""
+  };
+}
+
+async function debrief(){
+  enqueue({ type:"complete", pid:S.pid, domain:S.domain, participant:participantPayload("completed"), rows:S.trials });
+  setProgress(TOTAL_ITEMS + 2, TOTAL_ITEMS + 2, "");
+  app.innerHTML = `<div class="card"><h2>Saving your responses...</h2><p class="muted">Please keep this page open for a moment.</p></div>`;
+  await Promise.race([flush(), sleep(8000)]);
+  try { localStorage.setItem("bp_done", "1"); } catch(e){}
+  const D = DOMAINS[S.domain];
+  const done = S.src === "prolific"
+    ? `<p>Please click the button below to return to Prolific and register your completion.</p>`
+    : `<p>Your completion code is:</p><p><span class="code">${CONFIG.NETWORK_COMPLETION_CODE}</span></p>`;
+  app.innerHTML = `<div class="card">
+    <h2>Thank you</h2>
+    <p><b>About this study.</b> We are studying how people revise a judgment when a later report contradicts an earlier impression, and how much the source of a report matters. The ${D.unit}s you read about were invented for this study${S.domain==="health" ? ", and nothing here is health advice" : ""}. The question about reading one more report was a measure of curiosity. No further reports were available.</p>
+    <p>Your answers are anonymous. If you have questions, contact ${CONFIG.CONTACT_EMAIL}.</p>
+    ${done}
+    ${S.src === "prolific" ? `<div class="actions"><button class="btn" id="go">Return to Prolific</button></div>` : ""}</div>`;
+  const g = $("#go"); if (g) g.onclick = async () => { await flush(); await sleep(600); location.href = CONFIG.PROLIFIC_COMPLETION_URL; };
+}
+
+async function main(){
+  try { if (localStorage.getItem("bp_done") && !Q.get("again")) {
+    app.innerHTML = `<div class="card"><h2>Already completed</h2><p>Our records show this browser has already completed the study. Thank you!</p></div>`; return; } } catch(e){}
+  S.domain = await assignDomain();
+  await consent();
+  await about();
+  S.startedAt = nowISO();
+  enqueue({ type:"start", pid:S.pid, domain:S.domain, participant:participantPayload("started") });
+  await instructions();
+  await comprehension();
+  planConditions();
+  await runTarget(1);
+  await runTarget(2);
+  await attentionCheck();
+  await runTarget(3);
+  await runTarget(4);
+  await debrief();
+}
+main();
+</script>
+</body>
+</html>

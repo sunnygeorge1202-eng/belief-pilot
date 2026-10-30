@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Pilot Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0D2B1F;--card:#133626;--card2:#184530;--line:#2a4a39;--cream:#F5F0E8;--muted:#b3c2b4;--gold:#C9A84C;--sage:#9fc2ab;--bad:#ff9c8a;--good:#8fd6a5}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--cream);font-family:Inter,system-ui,sans-serif;line-height:1.5}
+body{padding:16px}
+.wrap{max-width:1180px;margin:0 auto}
+h1,h2,h3{font-family:'Playfair Display',Georgia,serif;margin:0 0 .5em}
+h1{font-size:1.8rem} h2{font-size:1.25rem;color:var(--gold)} h3{font-size:1rem;color:var(--cream)}
+.sub{color:var(--muted);font-size:.9rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.kpi{background:var(--card2);border-radius:10px;padding:12px 14px}
+.kpi b{display:block;font-size:1.6rem;font-family:'Playfair Display',serif;color:var(--cream)}
+.kpi span{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+input,select,button{font:inherit}
+input,select{background:var(--bg);color:var(--cream);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+button{background:var(--gold);color:#0D2B1F;border:0;border-radius:8px;padding:9px 16px;font-weight:600;cursor:pointer}
+button.alt{background:transparent;color:var(--cream);border:1px solid var(--line)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:.78rem;font-weight:600}
+.ok{background:rgba(143,214,165,.18);color:var(--good)} .no{background:rgba(255,156,138,.18);color:var(--bad)} .mid{background:rgba(201,168,76,.2);color:var(--gold)}
+svg text{fill:var(--muted);font-size:11px;font-family:Inter,sans-serif}
+.note{font-size:.84rem;color:var(--muted)}
+.hide{display:none}
+.bar{height:8px;background:var(--line);border-radius:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--gold)}
+.legend span{display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:.82rem;color:var(--muted)}
+.legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+a{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pilot admin dashboard</h1>
+  <div class="sub">Belief-updating pilot &middot; trust and health versions &middot; pilot estimates, not confirmatory tests</div>
+
+  <div class="card" id="connect">
+    <div class="row">
+      <input id="url" size="48" placeholder="Apps Script web app URL">
+      <input id="key" type="password" size="24" placeholder="Admin key">
+      <label class="note"><input type="checkbox" id="rem"> remember key for this tab</label>
+      <button id="load">Load data</button>
+      <label class="note"><input type="checkbox" id="auto"> auto-refresh (60s)</label>
+      <span id="status" class="note"></span>
+    </div>
+  </div>
+
+  <div id="dash" class="hide">
+    <div class="card">
+      <div class="row">
+        <label class="note">Task <select id="fDomain"><option value="all">All</option><option value="trust">Trust</option><option value="health">Health</option></select></label>
+        <label class="note">Recruited via <select id="fSrc"><option value="all">All</option><option value="prolific">Prolific</option><option value="network">Network</option></select></label>
+        <label class="note"><input type="checkbox" id="fExcl" checked> apply pre-specified exclusions</label>
+        <label class="note">Target N per task <input id="tgt" type="number" value="40" min="1" style="width:80px"></label>
+        <button class="alt" id="exTrials">Export trials CSV</button>
+        <button class="alt" id="exPart">Export participants CSV</button>
+        <button class="alt" id="exDer">Export derived CSV</button>
+      </div>
+    </div>
+
+    <h2>1. Recruitment and data quality</h2>
+    <div class="grid g4" id="kpis"></div>
+    <div class="grid g2">
+      <div class="card"><h3>Progress to target</h3><div id="progress"></div></div>
+      <div class="card"><h3>Exclusion flags</h3><div id="flags"></div></div>
+    </div>
+
+    <h2>2. Manipulation and measurement checks</h2>
+    <div class="grid g2">
+      <div class="card"><h3>Weight ratings by source credibility</h3><div id="chWeight"></div><div id="tbMan"></div></div>
+      <div class="card"><h3>Mean belief across phases</h3><div class="legend"><span><i style="background:#C9A84C"></i>high-credibility challenge</span><span><i style="background:#9fc2ab"></i>low-credibility challenge</span></div><div id="chTraj"></div>
+        <div class="note">Formation items precede the manipulation, so the two lines should coincide for F1 to F3 (a balance check).</div></div>
+    </div>
+    <div class="card"><h3>Can weighting be separated from updating?</h3><div id="sep"></div></div>
+
+    <h2>3. Does earlier partial uptake predict later revision?</h2>
+    <div class="card">
+      <div class="note" style="margin-bottom:8px">Outcome: revision at the test report (belief before minus belief after, in points). Predictors are z-scored; coefficients are points per SD. Standard errors are clustered by participant. Unresolved = gap at the challenge report minus the revision made. It splits into <b>discounted</b> = (1 - weight) &times; gap and <b>under-learned</b> = weight &times; gap - revision. Note that total unresolved is, by construction, the gap remaining at the test report; the split is what the theory adds.</div>
+      <div id="models"></div>
+    </div>
+    <div class="grid g2">
+      <div class="card"><h3>Coefficients, unresolved-state model</h3><div id="coefs"></div></div>
+      <div class="card"><h3>Revision at test vs. discounted share of the earlier gap</h3><div id="chScatter"></div></div>
+    </div>
+    <div class="card"><h3>Distribution of weight ratings</h3><div id="chHist"></div></div>
+
+    <h2>4. Pre-specified pilot criteria</h2>
+    <div class="card" id="criteria"></div>
+    <div class="note" style="margin:8px 0 28px">Offline: the volatility/history model (HGF) is not fitted here. Export the derived and trials CSVs and fit it in R or Python.</div>
+  </div>
+</div>
+
+<script>
+const CONFIG = { SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzH50Q21bx7B2Tn2jMhUBaOP9z_B6yp4hGOhR3FVjlwQcLFunJ5CALLip_6Y8mEQDo/exec" };
+const IS_LOCAL = ["localhost","127.0.0.1"].includes(location.hostname);
+const Q = new URLSearchParams(location.search);
+const DEFAULT_URL = (IS_LOCAL && Q.get("api")) ? Q.get("api") : CONFIG.SCRIPT_URL;
+const $ = s => document.querySelector(s);
+
+/* ---------------- stats helpers ---------------- */
+const mean = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : NaN;
+const sd = a => { if (a.length<2) return NaN; const m=mean(a); return Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/(a.length-1)); };
+const median = a => { if(!a.length) return NaN; const s=a.slice().sort((x,y)=>x-y), m=s.length>>1; return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+const f = (x,d=1) => (x===null||x===undefined||!isFinite(x)) ? "n/a" : x.toFixed(d);
+const tcrit = df => { const z=1.96; return z*(1+(z*z+1)/(4*df)+(5*z**4+16*z*z+3)/(96*df*df)); };
+function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function bootMeanCI(vals, B=2000){ // vals: one value per participant
+  if (vals.length<3) return [NaN,NaN];
+  const r=mulberry(7), n=vals.length, ms=[];
+  for(let b=0;b<B;b++){ let s=0; for(let i=0;i<n;i++) s+=vals[(r()*n)|0]; ms.push(s/n); }
+  ms.sort((x,y)=>x-y); return [ms[(B*0.025)|0], ms[(B*0.975)|0]];
+}
+function corr(x,y){ const n=x.length; if(n<3) return NaN; const mx=mean(x), my=mean(y); let sxy=0,sxx=0,syy=0; for(let i=0;i<n;i++){ sxy+=(x[i]-mx)*(y[i]-my); sxx+=(x[i]-mx)**2; syy+=(y[i]-my)**2; } return sxy/Math.sqrt(sxx*syy); }
+
+function invert(M){ const n=M.length; const A=M.map((r,i)=>r.concat(Array.from({length:n},(_,j)=>i===j?1:0)));
+  for(let c=0;c<n;c++){ let p=c; for(let r=c+1;r<n;r++) if(Math.abs(A[r][c])>Math.abs(A[p][c])) p=r;
+    if(Math.abs(A[p][c])<1e-10) return null; [A[c],A[p]]=[A[p],A[c]];
+    const d=A[c][c]; for(let j=0;j<2*n;j++) A[c][j]/=d;
+    for(let r=0;r<n;r++) if(r!==c){ const m=A[r][c]; if(m!==0) for(let j=0;j<2*n;j++) A[r][j]-=m*A[c][j]; } }
+  return A.map(r=>r.slice(n)); }
+function ols(X,y){ const n=X.length,k=X[0].length;
+  const XtX=Array.from({length:k},()=>Array(k).fill(0)), Xty=Array(k).fill(0);
+  for(let i=0;i<n;i++) for(let a=0;a<k;a++){ Xty[a]+=X[i][a]*y[i]; for(let b=0;b<k;b++) XtX[a][b]+=X[i][a]*X[i][b]; }
+  const inv=invert(XtX); if(!inv) return null;
+  const beta=inv.map(r=>r.reduce((s,v,j)=>s+v*Xty[j],0));
+  const res=y.map((yi,i)=>yi-X[i].reduce((s,v,j)=>s+v*beta[j],0));
+  return {beta,inv,res,n,k}; }
+function clusterSE(fit,X,groups){ const {inv,res,n,k}=fit; const G={};
+  groups.forEach((g,i)=>{ (G[g]=G[g]||Array(k).fill(0)); for(let a=0;a<k;a++) G[g][a]+=X[i][a]*res[i]; });
+  const gs=Object.values(G), ng=gs.length; const meat=Array.from({length:k},()=>Array(k).fill(0));
+  gs.forEach(s=>{ for(let a=0;a<k;a++) for(let b=0;b<k;b++) meat[a][b]+=s[a]*s[b]; });
+  const c=(ng/(ng-1))*((n-1)/(n-k)); const V=Array.from({length:k},()=>Array(k).fill(0));
+  for(let a=0;a<k;a++) for(let b=0;b<k;b++){ let s=0; for(let p=0;p<k;p++) for(let q=0;q<k;q++) s+=inv[a][p]*meat[p][q]*inv[q][b]; V[a][b]=s*c; }
+  return {se:V.map((r,i)=>Math.sqrt(Math.max(V[i][i],0))), ng}; }
+function zcols(rows, names){ const st={}; names.forEach(n=>{ const v=rows.map(r=>r[n]); st[n]={m:mean(v),s:sd(v)||1}; });
+  return rows.map(r=>{ const o={}; names.forEach(n=>o[n]=(r[n]-st[n].m)/st[n].s); return o; }); }
+function fitModel(rows, preds, within=false){
+  const Z=zcols(rows,preds); let X=Z.map(z=>(within?[]:[1]).concat(preds.map(p=>z[p]))); let y=rows.map(r=>r.revC);
+  const pid=rows.map(r=>r.pid);
+  if(within){ const gm={}; pid.forEach((p,i)=>{ (gm[p]=gm[p]||{n:0,s:Array(X[0].length+1).fill(0)}); gm[p].n++; X[i].forEach((v,j)=>gm[p].s[j]+=v); gm[p].s[X[0].length]+=y[i]; });
+    X=X.map((r,i)=>r.map((v,j)=>v-gm[pid[i]].s[j]/gm[pid[i]].n)); y=y.map((v,i)=>v-gm[pid[i]].s[X[0].length]/gm[pid[i]].n); }
+  const fit=ols(X,y); if(!fit) return null;
+  const cs=clusterSE(fit,X,pid); const ssr=fit.res.reduce((s,e)=>s+e*e,0), ym=mean(y), sst=y.reduce((s,v)=>s+(within?v:(v-ym))**2,0);
+  const r2=1-ssr/sst; const adj=1-(1-r2)*(fit.n-1)/(fit.n-fit.k);
+  return {fit,cs,r2,adj,names:(within?[]:["intercept"]).concat(preds),X,y,pid};
+}
+function lopoRMSE(rows, preds){ // leave-one-participant-out, standardising on training data
+  const ids=[...new Set(rows.map(r=>r.pid))]; let sse=0,n=0;
+  for(const id of ids){ const tr=rows.filter(r=>r.pid!==id), te=rows.filter(r=>r.pid===id); if(tr.length<preds.length+5) continue;
+    const st={}; preds.forEach(p=>{ const v=tr.map(r=>r[p]); st[p]={m:mean(v),s:sd(v)||1}; });
+    const mk=r=>[1].concat(preds.map(p=>(r[p]-st[p].m)/st[p].s));
+    const fit=ols(tr.map(mk),tr.map(r=>r.revC)); if(!fit) continue;
+    te.forEach(r=>{ const pr=mk(r).reduce((s,v,j)=>s+v*fit.beta[j],0); sse+=(r.revC-pr)**2; n++; }); }
+  return n?Math.sqrt(sse/n):NaN;
+}
+
+/* ---------------- data ---------------- */
+let RAW=null, timer=null;
+const numify = (o, cols) => { cols.forEach(c=>{ o[c] = (o[c]===""||o[c]===null||o[c]===undefined)?null:+o[c]; }); return o; };
+
+async function loadData(){
+  const url=$("#url").value.trim(), key=$("#key").value;
+  if(!url||!key){ $("#status").textContent="Enter the URL and key."; return; }
+  $("#status").textContent="Loading...";
+  try{
+    const r=await fetch(url+(url.includes("?")?"&":"?")+"action=data&key="+encodeURIComponent(key));
+    const j=await r.json();
+    if(!j.ok){ $("#status").textContent="Error: "+(j.error||"failed"); return; }
+    const seen=new Set(); const tr=[];
+    j.trials.forEach(t=>{ if(seen.has(t.key)) return; seen.add(t.key);
+      tr.push(numify(t,["target_pos","item_idx","evidence_value","belief_prev","belief","confidence","weight","seek_more","behav","rt_belief_ms","rt_total_ms"])); });
+    const pseen=new Set(); const pa=[];
+    j.participants.forEach(p=>{ if(pseen.has(p.pid)) return; pseen.add(p.pid); pa.push(numify(p,["duration_s","attn_pass","comp_pass","comp_attempts"])); });
+    RAW={participants:pa,trials:tr};
+    if($("#rem").checked) try{ sessionStorage.setItem("pk",key); sessionStorage.setItem("pu",url); }catch(e){}
+    $("#status").textContent="Loaded "+pa.length+" participants, "+tr.length+" trial rows at "+new Date().toLocaleTimeString();
+    $("#dash").classList.remove("hide"); render();
+  }catch(e){ $("#status").textContent="Network error: "+e.message; }
+}
+
+/* ---------------- analysis pipeline ---------------- */
+function analyse(){
+  const dom=$("#fDomain").value, src=$("#fSrc").value, excl=$("#fExcl").checked;
+  let P=RAW.participants.filter(p=>(dom==="all"||p.domain===dom)&&(src==="all"||p.src===src));
+  const tByP={}; RAW.trials.forEach(t=>{ (tByP[t.pid]=tByP[t.pid]||[]).push(t); });
+  const comp=P.filter(p=>p.status==="completed");
+  const medDur=median(comp.map(p=>p.duration_s).filter(x=>x));
+  const fastCut=comp.length>=5 ? 0.4*medDur : 150;
+  const flags={incomplete:0,attn:0,comp:0,fast:0,straight:0};
+  P.forEach(p=>{
+    const ts=tByP[p.pid]||[]; p.n=ts.length;
+    p.fl={};
+    p.fl.incomplete = !(p.status==="completed" && ts.length>=20);
+    p.fl.attn = p.attn_pass!==1;
+    p.fl.comp = p.comp_pass!==1;
+    p.fl.fast = !!p.duration_s && p.duration_s<fastCut;
+    const bs=ts.map(t=>t.belief).filter(x=>x!==null); p.fl.straight = bs.length>=10 && sd(bs)<3;
+    p.excluded = Object.values(p.fl).some(Boolean);
+    Object.keys(flags).forEach(k=>{ if(p.fl[k]) flags[k]++; });
+  });
+  const keep = excl ? P.filter(p=>!p.excluded) : P.filter(p=>p.status==="completed");
+  const keepSet=new Set(keep.map(p=>p.pid));
+  const dom_of={}; P.forEach(p=>dom_of[p.pid]=p.domain);
+  // derived rows
+  const by={}; RAW.trials.forEach(t=>{ if(!keepSet.has(t.pid)) return; const k=t.pid+"|"+t.target_pos; (by[k]=by[k]||{})[t.phase+t.item_idx]=t; });
+  const rows=[];
+  Object.entries(by).forEach(([k,o])=>{
+    if(!(o.formation1&&o.formation2&&o.formation3&&o.challenge1&&o.test1)) return;
+    const c=o.challenge1,t=o.test1,f3=o.formation3;
+    if([f3.belief,c.belief,t.belief,c.weight,t.weight,c.confidence,t.confidence].some(v=>v===null)) return;
+    const prior=f3.belief,bB=c.belief,bC=t.belief,eB=c.evidence_value??20,eC=t.evidence_value??20;
+    const gB=prior-eB,revB=prior-bB,gC=bB-eC,revC=bB-bC,w=c.weight/100;
+    rows.push({pid:c.pid,domain:dom_of[c.pid],pos:c.target_pos,target:c.target_id,cred:c.cred_cond==="high"?0.5:-0.5,credLabel:c.cred_cond,
+      f1:o.formation1.belief,f2:o.formation2.belief,f3:prior,bB,bC,confB:c.confidence,confC:t.confidence,w,wT:t.weight===null?null:t.weight/100,
+      seek:c.seek_more,behav:t.behav,gB,revB,gC,revC,Ut:gB-revB,Uw:(1-w)*gB,Ul:w*gB-revB,share:(gB-revB)>5?((1-w)*gB)/(gB-revB):null,
+      ratio:gB>0?revB/gB:null,alpha:(w>0.05&&gB>=10)?revB/(w*gB):null,ok:gB>=10&&gC>=10});
+  });
+  return {P,keep,flags,rows,fastCut,medDur};
+}
+
+/* ---------------- charts ---------------- */
+const C_HIGH="#C9A84C", C_LOW="#9fc2ab";
+function axisY(x0,y0,h,min,max,ticks){ let s=""; for(let i=0;i<=ticks;i++){ const v=min+(max-min)*i/ticks, y=y0+h-(h*(v-min)/(max-min)); s+=`<line x1="${x0}" x2="${x0+1}" y1="${y}" y2="${y}"/><text x="${x0-6}" y="${y+3}" text-anchor="end">${Math.round(v)}</text><line x1="${x0}" x2="9999" y1="${y}" y2="${y}" stroke="#2a4a39" stroke-width="0.5" style="display:none"/>`; } return s; }
+function trajChart(rows){
+  const W=520,H=250,L=40,T=14,B=34,R=14,w=W-L-R,h=H-T-B; const cats=["F1","F2","F3","Challenge","Test"]; const keys=["f1","f2","f3","bB","bC"];
+  const pidRows={}; rows.forEach(r=>{ (pidRows[r.pid]=pidRows[r.pid]||[]).push(r); });
+  const res={high:[],low:[]};
+  ["high","low"].forEach(cond=>{ keys.forEach((k,ki)=>{ const vals=[]; Object.values(pidRows).forEach(rs=>{ const a=rs.filter(r=>r.credLabel===cond).map(r=>r[k]); if(a.length) vals.push(mean(a)); }); res[cond][ki]={m:mean(vals),ci:bootMeanCI(vals,800),n:vals.length}; }); });
+  let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;
+  for(let i=0;i<=5;i++){ const v=i*20,y=T+h-h*v/100; svg+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="#2a4a39"/><text x="${L-6}" y="${y+3}" text-anchor="end">${v}</text>`; }
+  cats.forEach((c,i)=>{ const x=L+w*(i+0.5)/cats.length; svg+=`<text x="${x}" y="${H-12}" text-anchor="middle">${c}</text>`; });
+  [["high",C_HIGH,-4],["low",C_LOW,4]].forEach(([cond,col,dx])=>{ let d="";
+    res[cond].forEach((p,i)=>{ if(!isFinite(p.m)) return; const x=L+w*(i+0.5)/cats.length+dx, y=T+h-h*p.m/100; d+=(d?"L":"M")+x+" "+y;
+      if(isFinite(p.ci[0])){ const y1=T+h-h*p.ci[1]/100,y2=T+h-h*p.ci[0]/100; svg+=`<line x1="${x}" x2="${x}" y1="${y1}" y2="${y2}" stroke="${col}" stroke-width="1.5"/>`; } });
+    svg+=`<path d="${d}" fill="none" stroke="${col}" stroke-width="2"/>`;
+    res[cond].forEach((p,i)=>{ if(!isFinite(p.m)) return; const x=L+w*(i+0.5)/cats.length+dx, y=T+h-h*p.m/100; svg+=`<circle cx="${x}" cy="${y}" r="3.5" fill="${col}"/>`; }); });
+  return svg+"</svg>";
+}
+function barChart(items, max){ // items: {label,m,lo,hi,color}
+  const W=520,H=200,L=40,T=10,B=34,R=14,w=W-L-R,h=H-T-B; let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;
+  for(let i=0;i<=5;i++){ const v=max*i/5,y=T+h-h*v/max; svg+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="#2a4a39"/><text x="${L-6}" y="${y+3}" text-anchor="end">${Math.round(v)}</text>`; }
+  items.forEach((it,i)=>{ const bw=w/items.length*0.5, x=L+w*(i+0.5)/items.length-bw/2; if(!isFinite(it.m)) return; const y=T+h-h*it.m/max;
+    svg+=`<rect x="${x}" y="${y}" width="${bw}" height="${T+h-y}" fill="${it.color}" rx="3"/>`;
+    if(isFinite(it.lo)){ const cx=x+bw/2; svg+=`<line x1="${cx}" x2="${cx}" y1="${T+h-h*it.hi/max}" y2="${T+h-h*it.lo/max}" stroke="#F5F0E8" stroke-width="1.6"/>`; }
+    svg+=`<text x="${x+bw/2}" y="${H-12}" text-anchor="middle">${it.label}</text>`; });
+  return svg+"</svg>";
+}
+function scatter(rows,xk,yk,xlab){
+  const W=520,H=280,L=44,T=10,B=36,R=14,w=W-L-R,h=H-T-B; const xs=rows.map(r=>r[xk]),ys=rows.map(r=>r[yk]);
+  if(xs.length<3) return "<div class='note'>Not enough data yet.</div>";
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys); const sx=v=>L+w*(v-x0)/((x1-x0)||1), sy=v=>T+h-h*(v-y0)/((y1-y0)||1);
+  let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%"><rect x="${L}" y="${T}" width="${w}" height="${h}" fill="none" stroke="#2a4a39"/>`;
+  rows.forEach(r=>{ svg+=`<circle cx="${sx(r[xk])}" cy="${sy(r[yk])}" r="3" fill="${r.domain==="trust"?C_HIGH:C_LOW}" fill-opacity=".6"/>`; });
+  const fit=ols(rows.map(r=>[1,r[xk]]),ys); if(fit) svg+=`<line x1="${sx(x0)}" x2="${sx(x1)}" y1="${sy(fit.beta[0]+fit.beta[1]*x0)}" y2="${sy(fit.beta[0]+fit.beta[1]*x1)}" stroke="#F5F0E8" stroke-width="1.5"/>`;
+  svg+=`<text x="${L+w/2}" y="${H-6}" text-anchor="middle">${xlab||xk}</text><text x="12" y="${T+h/2}" transform="rotate(-90 12 ${T+h/2})" text-anchor="middle">revision at test (points)</text>`;
+  svg+=`<text x="${L}" y="${H-22}">${f(x0,2)}</text><text x="${L+w}" y="${H-22}" text-anchor="end">${f(x1,2)}</text>`;
+  return svg+"</svg>"+`<div class="legend"><span><i style="background:${C_HIGH}"></i>trust</span><span><i style="background:${C_LOW}"></i>health</span></div>`;
+}
+function hist(vals){
+  const W=1000,H=170,L=40,T=8,B=28,R=10,w=W-L-R,h=H-T-B, bins=10, c=Array(bins).fill(0); vals.forEach(v=>{ c[Math.min(bins-1,Math.floor(v*bins))]++; }); const mx=Math.max(1,...c);
+  let svg=`<svg viewBox="0 0 ${W} ${H}" width="100%">`; c.forEach((n,i)=>{ const bw=w/bins, x=L+i*bw, bh=h*n/mx; svg+=`<rect x="${x+3}" y="${T+h-bh}" width="${bw-6}" height="${bh}" fill="${C_HIGH}" rx="3"/><text x="${x+bw/2}" y="${H-10}" text-anchor="middle">${i*10}-${i*10+10}</text><text x="${x+bw/2}" y="${T+h-bh-3}" text-anchor="middle">${n||""}</text>`; });
+  return svg+"</svg>";
+}
+
+/* ---------------- render ---------------- */
+function render(){
+  if(!RAW) return;
+  const {P,keep,flags,rows,fastCut,medDur}=analyse(); const ok=rows.filter(r=>r.ok);
+  const comp=P.filter(p=>p.status==="completed");
+  $("#kpis").innerHTML=[
+    ["Started",P.length],["Completed",comp.length],["Completion rate",P.length?Math.round(100*comp.length/P.length)+"%":"n/a"],
+    ["Median time",isFinite(medDur)?f(medDur/60,1)+" min":"n/a"],["Excluded",comp.filter(p=>p.excluded).length],["Analysable",keep.length],["Target rows",rows.length]
+  ].map(([a,b])=>`<div class="kpi"><b>${b}</b><span>${a}</span></div>`).join("");
+  const tgt=+$("#tgt").value||40;
+  $("#progress").innerHTML=["trust","health"].map(d=>{ const n=keep.filter(p=>p.domain===d).length, pc=Math.min(100,Math.round(100*n/tgt));
+    const nst=P.filter(p=>p.domain===d).length; return `<div style="margin:10px 0"><div class="row" style="justify-content:space-between"><span>${d}</span><span class="note">${n} analysable / ${tgt} &middot; ${nst} started</span></div><div class="bar"><i style="width:${pc}%"></i></div></div>`; }).join("")
+    +`<div class="note">By source: Prolific ${keep.filter(p=>p.src==="prolific").length}, network ${keep.filter(p=>p.src==="network").length}</div>`;
+  $("#flags").innerHTML=`<table><tr><th>Rule</th><th class="n">Participants</th></tr>
+    <tr><td>Not completed or fewer than 20 trial rows</td><td class="n">${flags.incomplete}</td></tr>
+    <tr><td>Failed attention check</td><td class="n">${flags.attn}</td></tr>
+    <tr><td>Failed comprehension check</td><td class="n">${flags.comp}</td></tr>
+    <tr><td>Finished faster than ${f(fastCut/60,1)} min (40% of median)</td><td class="n">${flags.fast}</td></tr>
+    <tr><td>Straight-lining (belief SD &lt; 3)</td><td class="n">${flags.straight}</td></tr></table>
+    <div class="note">Rows with a gap under 10 points (belief already near the evidence) are dropped from the main test: ${rows.length-ok.length} of ${rows.length}.</div>`;
+
+  // manipulation checks (participant-level paired differences)
+  const pids=[...new Set(ok.map(r=>r.pid))];
+  function paired(key){ const d=[],h=[],l=[]; pids.forEach(id=>{ const rs=ok.filter(r=>r.pid===id), a=rs.filter(r=>r.credLabel==="high").map(r=>r[key]).filter(v=>v!==null), b=rs.filter(r=>r.credLabel==="low").map(r=>r[key]).filter(v=>v!==null);
+      if(a.length&&b.length){ d.push(mean(a)-mean(b)); h.push(mean(a)); l.push(mean(b)); } }); return {d,h,l}; }
+  const defs=[["Weight rating (0-100)","w",100],["Revision at challenge (points)","revB",1],["Belief after challenge","bB",1],["Confidence after challenge","confB",1],["Chose to see another report","seek",100]];
+  let tb=`<table><tr><th>Measure</th><th class="n">High</th><th class="n">Low</th><th class="n">Diff (95% CI)</th><th class="n">dz</th><th class="n">n</th></tr>`;
+  let wBars=null, dzW=NaN, wDiff=NaN;
+  defs.forEach(([lab,key,scale])=>{ const p=paired(key); if(p.d.length<2){ tb+=`<tr><td>${lab}</td><td colspan="5" class="note">not enough data</td></tr>`; return; }
+    const ci=bootMeanCI(p.d.map(x=>x*scale)), dz=mean(p.d)/sd(p.d);
+    tb+=`<tr><td>${lab}</td><td class="n">${f(mean(p.h)*scale)}</td><td class="n">${f(mean(p.l)*scale)}</td><td class="n">${f(mean(p.d)*scale)} (${f(ci[0])}, ${f(ci[1])})</td><td class="n">${f(dz,2)}</td><td class="n">${p.d.length}</td></tr>`;
+    if(key==="w"){ dzW=dz; wDiff=mean(p.d)*scale; const bh=bootMeanCI(p.h.map(x=>x*100)), bl=bootMeanCI(p.l.map(x=>x*100));
+      wBars=[{label:"High credibility",m:mean(p.h)*100,lo:bh[0],hi:bh[1],color:C_HIGH},{label:"Low credibility",m:mean(p.l)*100,lo:bl[0],hi:bl[1],color:C_LOW}]; } });
+  $("#tbMan").innerHTML=tb+"</table>";
+  $("#chWeight").innerHTML=wBars?barChart(wBars,100):"<div class='note'>Not enough data yet.</div>";
+  $("#chTraj").innerHTML=ok.length>=4?trajChart(ok):"<div class='note'>Not enough data yet.</div>";
+
+  // separability
+  const rr=ok.filter(r=>r.ratio!==null); const rW=corr(rr.map(r=>r.w),rr.map(r=>r.ratio));
+  const sy=ok.filter(r=>r.seek===1).map(r=>r.w), sn=ok.filter(r=>r.seek===0).map(r=>r.w);
+  $("#sep").innerHTML=`<table>
+    <tr><td>Correlation of weight rating with proportion of the gap revised</td><td class="n">${f(rW,2)}</td><td class="note">n = ${rr.length}. Near 1 means the weight rating just mirrors the update, and the weight/learning split would not be informative.</td></tr>
+    <tr><td>Mean weight when participant chose to see another report vs. not</td><td class="n">${f(mean(sy)*100)} vs ${f(mean(sn)*100)}</td><td class="note">n = ${sy.length} vs ${sn.length}. A validity check on the weight rating against behaviour.</td></tr>
+    <tr><td>Share of discounted (1 - weight) in the unresolved gap</td><td class="n">${f(100*mean(ok.map(r=>r.Ut>1?r.Uw/r.Ut:NaN).filter(isFinite)))}%</td><td class="note">If this is near 0% or 100% for most people, the split has little variance to work with.</td></tr></table>`;
+
+  // models
+  const preds0=["gC","revB"], preds1=["gC","revB","cred","confB"], preds2=["gC","revB","cred","confB","Uw"], preds3=["gC","revB","cred","confB","Uw","wT"];
+  if(ok.length>=20 && pids.length>=8){
+    const ms=[["M0  remaining gap and earlier revision only",preds0],["M1  + source credibility and confidence",preds1],["M2  + discounted part of the earlier gap (unresolved-state split)",preds2],["M3  + weight given to the test report (possible mediator)",preds3]].map(([n,p])=>{ const m=fitModel(ok,p); return {n,p,m,cv:lopoRMSE(ok,p)}; });
+    const within=fitModel(ok,preds2,true);
+    $("#models").innerHTML=`<table><tr><th>Model</th><th class="n">R&sup2;</th><th class="n">Adj. R&sup2;</th><th class="n">Leave-one-participant-out RMSE</th></tr>`+
+      ms.map(o=>`<tr><td>${o.n}</td><td class="n">${o.m?f(o.m.r2,3):"n/a"}</td><td class="n">${o.m?f(o.m.adj,3):"n/a"}</td><td class="n">${f(o.cv,2)}</td></tr>`).join("")+
+      `<tr><td>M2 within-participant (person means removed)</td><td class="n">${within?f(within.r2,3):"n/a"}</td><td class="n">${within?f(within.adj,3):"n/a"}</td><td class="n">n/a</td></tr></table>
+      <div class="note">${ok.length} target rows from ${pids.length} participants. Lower cross-validated RMSE for M2 than M1 means the split of the earlier gap adds predictive value out of sample.</div>`;
+    const m2=ms[2].m; window.__m2=ms;
+    if(m2){ const df=Math.max(2,m2.cs.ng-1), tc=tcrit(df);
+      $("#coefs").innerHTML=`<table><tr><th>Term</th><th class="n">b (pts/SD)</th><th class="n">SE</th><th class="n">95% CI</th></tr>`+
+        m2.names.map((nm,i)=>{ const b=m2.fit.beta[i],se=m2.cs.se[i]; return `<tr><td>${{gC:"gap remaining at test",revB:"revision at challenge",cred:"source credibility (high)",confB:"confidence at challenge",Uw:"discounted part of earlier gap"}[nm]||nm}</td><td class="n">${f(b,2)}</td><td class="n">${f(se,2)}</td><td class="n">${f(b-tc*se,2)} to ${f(b+tc*se,2)}</td></tr>`; }).join("")+`</table>
+        <div class="note">${m2.cs.ng} clusters. The total unresolved gap equals the gap remaining at the test report, so it is already in the model as "gap remaining". The unresolved-state idea adds content only through the split: for the same remaining gap, does it matter how much was discounted rather than under-learned?</div>`; }
+    $("#chScatter").innerHTML=scatter(ok.filter(r=>r.share!==null),"share","revC","discounted share of earlier unresolved gap (0 to 1) \u2192");
+  } else { $("#models").innerHTML="<div class='note'>Needs at least 8 participants and 20 target rows.</div>"; $("#coefs").innerHTML=""; $("#chScatter").innerHTML=""; }
+  $("#chHist").innerHTML=ok.length?hist(ok.map(r=>r.w)):"<div class='note'>No data yet.</div>";
+
+  // criteria
+  const cri=[];
+  const c1=isFinite(dzW)?(wDiff>=15&&dzW>=0.5):null; cri.push(["Source credibility moves weight ratings (high minus low at least 15 points, dz at least 0.5)",c1,isFinite(wDiff)?`${f(wDiff)} points, dz ${f(dzW,2)}`:"no data"]);
+  const c2=isFinite(rW)?Math.abs(rW)<0.8:null; cri.push(["Weight is not just the update (|r| below 0.8)",c2,isFinite(rW)?`r = ${f(rW,2)}`:"no data"]);
+  let c3=null,d3="no data"; if(window.__m2&&ok.length>=20){ const a=window.__m2[1].cv,b=window.__m2[2].cv; c3=isFinite(a)&&isFinite(b)?(b<a*0.99):null; d3=`M1 ${f(a,2)} vs M2 ${f(b,2)}`; }
+  cri.push(["Unresolved terms improve out-of-sample prediction over M1 (RMSE at least 1% lower)",c3,d3]);
+  cri.push(["Enough usable data (at least 30 analysable participants per task)",Math.min(keep.filter(p=>p.domain==="trust").length,keep.filter(p=>p.domain==="health").length)>=30,`trust ${keep.filter(p=>p.domain==="trust").length}, health ${keep.filter(p=>p.domain==="health").length}`]);
+  $("#criteria").innerHTML=`<table><tr><th>Criterion</th><th>Status</th><th>Value</th></tr>`+cri.map(([a,b,c])=>`<tr><td>${a}</td><td>${b===null?'<span class="pill mid">pending</span>':b?'<span class="pill ok">met</span>':'<span class="pill no">not met</span>'}</td><td>${c}</td></tr>`).join("")+`</table>
+   <div class="note">Fail on criteria 1 or 2 means the design cannot separate weighting from learning, and the main test is uninterpretable. That is a finding about the paradigm, not about the theory.</div>`;
+  window.__state={P,rows};
+}
+
+/* ---------------- export ---------------- */
+function csv(rows, cols){ const esc=v=>{ if(v===null||v===undefined) return ""; const s=String(v); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  return [cols.join(",")].concat(rows.map(r=>cols.map(c=>esc(r[c])).join(","))).join("\n"); }
+function dl(name,text){ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type:"text/csv"})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+
+/* ---------------- wiring ---------------- */
+$("#url").value=DEFAULT_URL.startsWith("PASTE")?"":DEFAULT_URL;
+try{ const k=sessionStorage.getItem("pk"),u=sessionStorage.getItem("pu"); if(k) $("#key").value=k; if(u) $("#url").value=u; }catch(e){}
+$("#load").onclick=loadData;
+["fDomain","fSrc","fExcl","tgt"].forEach(id=>$("#"+id).addEventListener("change",render));
+$("#auto").onchange=e=>{ clearInterval(timer); if(e.target.checked) timer=setInterval(loadData,60000); };
+$("#exTrials").onclick=()=>RAW&&dl("trials.csv",csv(RAW.trials,["key","pid","domain","target_pos","target_id","cred_cond","phase","item_idx","source_cred","evidence_value","belief_prev","belief","confidence","weight","seek_more","behav","rt_belief_ms","rt_total_ms","ts"]));
+$("#exPart").onclick=()=>RAW&&dl("participants.csv",csv(RAW.participants,["pid","domain","src","started_at","completed_at","duration_s","age_band","device","attn_pass","comp_pass","comp_attempts","target_order","cred_order","status"]));
+$("#exDer").onclick=()=>window.__state&&dl("derived.csv",csv(window.__state.rows,["pid","domain","pos","target","credLabel","f1","f2","f3","bB","bC","confB","confC","w","wT","seek","behav","gB","revB","gC","revC","Ut","Uw","Ul","share","ratio","alpha","ok"]));
+if(IS_LOCAL && Q.get("key")){ $("#key").value=Q.get("key"); loadData(); }
+</script>
+</body>
+</html>
