@@ -518,10 +518,14 @@ function participantPayload(status){
 }
 
 async function debrief(){
-  enqueue({ type:"complete", pid:S.pid, domain:S.domain, participant:participantPayload("completed"), rows:S.trials });
+  const msg = { type:"complete", pid:S.pid, domain:S.domain, participant:participantPayload("completed"), rows:S.trials };
+  enqueue(msg);   // fallback: retried with the queue if the direct send below fails
   setProgress(TOTAL_ITEMS + 2, TOTAL_ITEMS + 2, "");
   app.innerHTML = `<div class="card"><h2>Saving your responses...</h2><p class="muted">Please keep this page open for a moment.</p></div>`;
-  await Promise.race([flush(), sleep(8000)]);
+  // send the completion straight away instead of waiting behind queued trials (each send takes ~3 s);
+  // it carries every trial row, and the server ignores duplicates
+  const direct = fetch(API, { method:"POST", mode:"no-cors", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(msg) }).catch(() => {});
+  await Promise.race([direct, sleep(20000)]);
   S.done.finished = 1;
   try { localStorage.setItem("bp_done", "1"); localStorage.removeItem(CK(S.domain)); } catch(e){}
   const D = DOMAINS[S.domain];
