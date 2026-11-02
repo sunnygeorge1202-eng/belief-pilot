@@ -288,9 +288,9 @@ function loadCk(){
   }
   return best;
 }
-function resumePrompt(pct){
+function resumePrompt(pct, domain){
   return new Promise(res => {
-    app.innerHTML = `<div class="card"><h2>Welcome back</h2><p>You have an unfinished session, about ${pct}% done. You can continue where you left off.</p>
+    app.innerHTML = `<div class="card"><h2>Welcome back</h2><p>You have an unfinished session (${domain === "trust" ? "judging colleagues" : "judging health practices"}), about ${pct}% done. You can continue where you left off, or start over.</p>
       <div class="actions"><button class="btn" id="rs" style="margin-right:10px">Start over</button><button class="btn" id="rc">Continue</button></div></div>`;
     $("#rc").onclick = () => res("resume"); $("#rs").onclick = () => res("restart");
   });
@@ -542,12 +542,12 @@ async function debrief(){
 }
 
 async function main(){
-  try { if (localStorage.getItem("bp_done") && !Q.get("again")) {
+  try { if (localStorage.getItem("bp_done") && !Q.get("again") && !Q.get("debug")) {
     app.innerHTML = `<div class="card"><h2>Already completed</h2><p>Our records show this browser has already completed the study. Thank you!</p></div>`; return; } } catch(e){}
   const ck = loadCk();
   if (ck) {
     const pct = Math.round(100 * ck.itemsDone / (TOTAL_ITEMS + 2));
-    if (await resumePrompt(pct) === "resume") { Object.assign(S, ck.S); itemsDone = ck.itemsDone; setProgress(itemsDone, TOTAL_ITEMS + 2, ""); }
+    if (await resumePrompt(pct, ck.S.domain) === "resume") { Object.assign(S, ck.S); itemsDone = ck.itemsDone; setProgress(itemsDone, TOTAL_ITEMS + 2, ""); }
     else { try { localStorage.removeItem(CK(ck.S.domain)); } catch(e){} }
   }
   if (!S.domain) S.domain = await assignDomain();
@@ -566,6 +566,27 @@ async function main(){
   await runTarget(3);
   await runTarget(4);
   await debrief();
+}
+/* ---------- researcher debug panel: add ?debug=1 to the survey URL ---------- */
+if (Q.get("debug")) {
+  const box = document.createElement("div");
+  box.style.cssText = "position:fixed;left:8px;right:8px;bottom:8px;background:#102a1d;color:#F5F0E8;font:12px/1.5 monospace;padding:8px 10px;border-radius:8px;z-index:99;opacity:.95;white-space:pre-wrap";
+  document.body.appendChild(box);
+  const upd = async () => {
+    let ping = "checking...", st = "";
+    if (!API || API.startsWith("PASTE")) ping = "NO SCRIPT_URL SET IN index.html";
+    else {
+      try { const j = await (await fetch(API + "?action=ping")).json(); ping = j.ok ? "OK (script v" + (j.v || 1) + ")" : "ERROR " + j.error; }
+      catch(e){ ping = "UNREACHABLE: check deployment access is Anyone"; }
+      if (S.done.about) {
+        try { const j = await (await fetch(API + "?action=status&pid=" + S.pid)).json();
+          st = j.ok ? "saved on server: participant=" + (j.participant || "none") + ", trial rows=" + j.trials + " (page has " + S.trials.length + ")"
+                    : "status unavailable: redeploy the newest Code.gs"; } catch(e){ st = "status check failed"; }
+      }
+    }
+    box.textContent = "DEBUG task=" + S.domain + " pid=" + S.pid + "\nbackend: " + ping + "\nqueued to send: " + qLoad().length + "\n" + st;
+  };
+  setInterval(upd, 3000); setTimeout(upd, 500);
 }
 main();
 </script>
