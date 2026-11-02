@@ -272,16 +272,21 @@ const TOTAL_ITEMS = 20;   // 4 targets x 5 items
 let itemsDone = 0;
 
 /* ---------- save and resume (same browser, 3 days) ---------- */
-const CK = "bp_ckpt_v1";
+// one checkpoint per task, so ?task=trust and ?task=health never resume each other
+const CK = d => "bp_ckpt_v1_" + d;
 function save(){
-  try { localStorage.setItem(CK, JSON.stringify({ t:Date.now(), itemsDone, S:{
+  try { localStorage.setItem(CK(S.domain), JSON.stringify({ t:Date.now(), itemsDone, S:{
     pid:S.pid, domain:S.domain, src:S.src, prolific:S.prolific, ref:S.ref, startedAt:S.startedAt, ageBand:S.ageBand,
     trials:S.trials, attnPass:S.attnPass, compPass:S.compPass, compAttempts:S.compAttempts, order:S.order, credOrder:S.credOrder, done:S.done } })); } catch(e){}
 }
 function loadCk(){
-  try { const c = JSON.parse(localStorage.getItem(CK) || "null");
-    if (c && c.S && c.S.done && c.S.done.consent && !c.S.done.finished && Date.now() - c.t < 72*3600*1000) return c; } catch(e){}
-  return null;
+  const forced = DOMAINS[Q.get("task")] ? Q.get("task") : null;
+  let best = null;
+  for (const d of forced ? [forced] : Object.keys(DOMAINS)) {
+    try { const c = JSON.parse(localStorage.getItem(CK(d)) || "null");
+      if (c && c.S && c.S.domain === d && c.S.done && c.S.done.consent && !c.S.done.finished && Date.now() - c.t < 72*3600*1000 && (!best || c.t > best.t)) best = c; } catch(e){}
+  }
+  return best;
 }
 function resumePrompt(pct){
   return new Promise(res => {
@@ -518,7 +523,7 @@ async function debrief(){
   app.innerHTML = `<div class="card"><h2>Saving your responses...</h2><p class="muted">Please keep this page open for a moment.</p></div>`;
   await Promise.race([flush(), sleep(8000)]);
   S.done.finished = 1;
-  try { localStorage.setItem("bp_done", "1"); localStorage.removeItem(CK); } catch(e){}
+  try { localStorage.setItem("bp_done", "1"); localStorage.removeItem(CK(S.domain)); } catch(e){}
   const D = DOMAINS[S.domain];
   const done = S.src === "prolific"
     ? `<p>Please click the button below to return to Prolific and register your completion.</p>`
@@ -539,7 +544,7 @@ async function main(){
   if (ck) {
     const pct = Math.round(100 * ck.itemsDone / (TOTAL_ITEMS + 2));
     if (await resumePrompt(pct) === "resume") { Object.assign(S, ck.S); itemsDone = ck.itemsDone; setProgress(itemsDone, TOTAL_ITEMS + 2, ""); }
-    else { try { localStorage.removeItem(CK); } catch(e){} }
+    else { try { localStorage.removeItem(CK(ck.S.domain)); } catch(e){} }
   }
   if (!S.domain) S.domain = await assignDomain();
   if (!S.done.consent) { await consent(); S.done.consent = 1; }
